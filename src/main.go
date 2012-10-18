@@ -92,7 +92,6 @@ func Receiver(port int, peers []LoadPeer) {
 }
 
 func main() {
-	/*
 	var err error
 	var buffer bytes.Buffer
 
@@ -120,7 +119,6 @@ func main() {
 	}
 
 	lm2.Dump()
-	*/
 
 	Sender(1, nil, nil)
 }
