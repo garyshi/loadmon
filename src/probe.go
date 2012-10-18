@@ -49,6 +49,15 @@ func (load *ProcLoad) Probe() error {
 	return nil
 }
 
+// stab code
+func (load *CPULoad) Probe() error {
+	load.Items = make([]CPUItem, 3)
+	load.Items[0] = CPUItem{255*3/10, 255*2/10, 255*2/10, 255*3/10}
+	load.Items[1] = CPUItem{255*4/10, 255*1/10, 255*1/10, 255*4/10}
+	load.Items[2] = CPUItem{255*2/10, 255*2/10, 255*3/10, 255*3/10}
+	return nil
+}
+
 func (m *LoadMessage) ProbeInit() error {
 	return nil
 }
@@ -62,7 +71,7 @@ func (m *LoadMessage) Probe() error {
 	m.Timestamp = uint32(time.Now().Unix() - 946684800)
 
 	if err := m.Proc_load.Probe(); err != nil { return err }
-	m.Cpu_load.Items = make([]CPUItem, 0)
+	if err := m.Cpu_load.Probe(); err != nil { return err }
 
 	return nil
 }
