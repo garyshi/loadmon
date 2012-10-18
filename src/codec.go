@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 )
 
-func (load ProcLoad) Encode() (uint8, *bytes.Buffer) {
+func (load *ProcLoad) Encode() (uint8, *bytes.Buffer) {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, load.Uptime_total)
 	binary.Write(buf, binary.BigEndian, load.Uptime_idle)
@@ -37,7 +37,7 @@ func (load *ProcLoad) Decode(splen uint8, r io.Reader) error {
 	return nil
 }
 
-func (load CPULoad) Encode() (uint8, *bytes.Buffer) {
+func (load *CPULoad) Encode() (uint8, *bytes.Buffer) {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, uint8(len(load.Items)))
 
