@@ -56,7 +56,7 @@ func (load *CPULoad) Decode(splen uint8, r io.Reader) error {
 
 	if splen < 1 { return fmt.Errorf("CPULoad.Decode: invalid subpacket size (%d)", splen) }
 	binary.Read(r, binary.BigEndian, &n)
-	if splen != 1 + n * 4 { return fmt.Errorf("CPULoad.Decode: invalid subpacket size (%d)", splen) }
+	if splen != 1 + n * 8 { return fmt.Errorf("CPULoad.Decode: invalid subpacket size (%d)", splen) }
 
 	load.Items = make([]CPUItem, n)
 	for i := 0; i < int(n); i ++ {

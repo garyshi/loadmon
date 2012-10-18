@@ -27,11 +27,12 @@ type ProcLoad struct {
 }
 
 type CPUItem struct {
-	// normalize to 0-255, stands for 0-100%
-	Rate_user, Rate_sys, Rate_iowait, Rate_idle uint8
+	// normalize to 0-65535, stands for 0-100%
+	Rate_user, Rate_sys, Rate_iowait, Rate_idle uint16
 }
 
 type CPULoad struct {
+	Interval float32
 	Items []CPUItem
 }
 

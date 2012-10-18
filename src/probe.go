@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"strconv"
 	"io/ioutil"
+	"time"
 )
 
 func (load *ProcLoad) Probe() error {
@@ -44,6 +45,24 @@ func (load *ProcLoad) Probe() error {
 		case 'Z': load.Procs_zombie ++
 		}
 	}
+
+	return nil
+}
+
+func (m *LoadMessage) ProbeInit() error {
+	return nil
+}
+
+func (m *LoadMessage) ProbeRotate() error {
+	return nil
+}
+
+func (m *LoadMessage) Probe() error {
+	// seconds from 2000-01-01 00:00:00 UTC, can work till year 2136
+	m.Timestamp = uint32(time.Now().Unix() - 946684800)
+
+	if err := m.Proc_load.Probe(); err != nil { return err }
+	m.Cpu_load.Items = make([]CPUItem, 0)
 
 	return nil
 }
