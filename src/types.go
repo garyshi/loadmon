@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"io"
+	"bytes"
 )
 
 const (
@@ -34,6 +34,7 @@ type CPUItem struct {
 type CPULoad struct {
 	Interval float32
 	Items []CPUItem
+	Current [][4]int64
 }
 
 type LoadMessage struct {
