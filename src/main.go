@@ -15,7 +15,7 @@ import (
 type LoadPeer struct {
 	addr *net.UDPAddr
 	conn *net.UDPConn
-	logfile *os.File
+	logfile *LogFile
 }
 
 func Sender(interval int, logfile *LogFile, peers []LoadPeer) {
@@ -32,8 +32,9 @@ func Sender(interval int, logfile *LogFile, peers []LoadPeer) {
 		}
 
 		fmt.Println()
-		fmt.Println("Local LoadMessage")
+		fmt.Printf("Local LoadMessage, size=%d\n", buffer.Len())
 		hex.Dumper(os.Stdout).Write(buffer.Bytes())
+		fmt.Println()
 		fmt.Println()
 		lm.Dump(os.Stdout)
 		logfile.WriteMessage(buffer.Bytes())
@@ -64,9 +65,7 @@ func Receiver(port int, peers []LoadPeer) {
 			if !addr.IP.Equal(peer.addr.IP) { continue }
 			err = lm.Decode(bytes.NewReader(buf[:n]))
 			if err != nil { fmt.Println("Error decode packet:", err) }
-			fmt.Fprintln(peer.logfile)
-			fmt.Fprintln(peer.logfile, "LoadMessage from", addr.IP)
-			lm.Dump(peer.logfile)
+			peer.logfile.WriteMessage(buf[:n])
 			break
 		}
 	}
@@ -76,6 +75,7 @@ func main() {
 	var err error
 	var peers []LoadPeer
 
+	now := time.Now()
 	f_server := flag.Bool("l", false, "server mode")
 	f_port := flag.Int("p", 9999, "udp port to listen and (default) send")
 	f_peers := flag.String("P", "", "peers, comma separated ipaddr[:port]")
@@ -92,8 +92,8 @@ func main() {
 			peers[i].conn,err = net.DialUDP("udp", nil, peers[i].addr)
 			if err != nil { log.Fatal("failed connect to udp:", peers[i].addr) }
 			if *f_server {
-				filename := fmt.Sprintf("%s.log", peers[i].addr.IP)
-				peers[i].logfile,err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				filename := LogFileName("", peers[i].addr.IP.String(), &now)
+				peers[i].logfile,err = OpenLogFile(filename, MODE_APPEND)
 				if err != nil { log.Fatal("failed open logfile:", filename) }
 			}
 		}
@@ -104,7 +104,6 @@ func main() {
 	}
 
 	if *f_monitor {
-		now := time.Now()
 		hostname,err := os.Hostname()
 		if err != nil { hostname = "localhost" }
 		filename := LogFileName("", hostname, &now)
