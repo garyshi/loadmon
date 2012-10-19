@@ -121,6 +121,42 @@ func (load *CPULoad) Probe() (err error) {
 	return nil
 }
 
+func (m *MemoryLoad) Probe() (err error) {
+	var value int64
+	var line string
+	var fields []string
+
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		fmt.Println(fmt.Errorf("MemoryLoad.Probe: failed optn /proc/meminfo"))
+		return
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+
+	line, err = reader.ReadString('\n')
+	for err == nil {
+		fields = strings.Split(line, ":")
+		fields[1] = strings.Trim(fields[1], " kbB\r\n")
+		value, err = strconv.ParseInt(fields[1], 0, 32)
+		if err != nil { return }
+		switch{
+		case fields[0] == "MemFree": m.free = uint32(value)
+		case fields[0] == "Buffers": m.buffers = uint32(value)
+		case fields[0] == "Cached": m.cached = uint32(value)
+		case fields[0] == "Dirty": m.dirty = uint32(value)
+		case fields[0] == "Active": m.active = uint32(value)
+		case fields[0] == "SwapCached": m.swapcached = uint32(value)
+		case fields[0] == "SwapTotal": m.swaptotal = uint32(value)
+		case fields[0] == "SwapFree": m.swapfree = uint32(value)
+		}
+		line, err = reader.ReadString('\n') 
+	}
+
+	if err == io.EOF { err = nil }
+	return
+}
+
 func (m *LoadMessage) ProbeInit() error {
 	m.Cpu_load.ProbeInit()
 	return nil
