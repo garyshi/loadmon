@@ -37,6 +37,10 @@ type CPULoad struct {
 	Current [][4]int64
 }
 
+type MemoryLoad struct {
+	free, buffers, cached, dirty, active, swapcached, swaptotal, swapfree uint32
+}
+
 type LoadMessage struct {
 	Interval uint16
 	Timestamp uint32 // timestamp: seconds from 2010-01-01 00:00:00

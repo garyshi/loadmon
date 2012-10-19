@@ -53,8 +53,7 @@ func (load *ProcLoad) Probe() error {
 	return nil
 }
 
-// for cpuload
-func convtoint(fields []string) [4]int64 {
+func cpuload_convtoint(fields []string) [4]int64 {
 	var i1, i2, i3, i4 int64
 	i1, _ = strconv.ParseInt(fields[0], 0, 64)
 	i2, _ = strconv.ParseInt(fields[2], 0, 64)
@@ -63,8 +62,7 @@ func convtoint(fields []string) [4]int64 {
 	return [4]int64{i1, i2, i3, i4}
 }
 
-// for cpuload
-func getstat() (rslt [][4]int64, err error) {
+func cpuload_getstat() (rslt [][4]int64, err error) {
 	var line string
 	var fields []string
 
@@ -82,7 +80,7 @@ func getstat() (rslt [][4]int64, err error) {
 	for err == nil {
 		fields = strings.Fields(line)
 		if strings.HasPrefix(fields[0], "cpu") {
-			rslt = append(rslt, convtoint(fields[1:]))
+			rslt = append(rslt, cpuload_convtoint(fields[1:]))
 		}
 		line, err = reader.ReadString('\n') 
 	}
@@ -92,7 +90,7 @@ func getstat() (rslt [][4]int64, err error) {
 }
 
 func (load *CPULoad) ProbeInit() (err error) {
-	rslt, err := getstat()
+	rslt, err := cpuload_getstat()
 	load.Current = rslt
 	load.Items = make([]CPUItem, len(rslt))
 	return err
@@ -102,7 +100,7 @@ func (load *CPULoad) Probe() (err error) {
 	var all float32
 	var diff [4]float32
 
-	rslt, err := getstat()
+	rslt, err := cpuload_getstat()
 	if len(load.Current) != len(rslt) {
 		return errors.New("different CPU numbers")
 	}
