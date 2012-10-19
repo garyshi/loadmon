@@ -1,9 +1,9 @@
 package main
 
 import (
+	"io"
 	"os"
 	"fmt"
-	"time"
 	"bytes"
 	"bufio"
 	"errors"
@@ -53,54 +53,64 @@ func (load *ProcLoad) Probe() error {
 	return nil
 }
 
+// for cpuload
 func convtoint(fields []string) [4]int64 {
-	var rslt []int64
-	for _, field := range fields {
-		i, _ := strconv.ParseInt(field, 0, 64)
-		rslt = append(rslt, i)
-	}
-	return [4]int64{rslt[0], rslt[2], rslt[4], rslt[3]}
+	var i1, i2, i3, i4 int64
+	i1, _ = strconv.ParseInt(fields[0], 0, 64)
+	i2, _ = strconv.ParseInt(fields[2], 0, 64)
+	i3, _ = strconv.ParseInt(fields[4], 0, 64)
+	i4, _ = strconv.ParseInt(fields[3], 0, 64)
+	return [4]int64{i1, i2, i3, i4}
 }
 
-func (load *CPULoad) getstat() error {
-	var err error
+// for cpuload
+func getstat() (rslt [][4]int64, err error) {
 	var line string
 	var fields []string
 
 	file, err := os.Open("/proc/stat")
 	if err != nil {
 		fmt.Println(fmt.Errorf("CPULoad.Probe: failed optn /proc/stat"))
-		return err
+		return
 	}
+	defer file.Close()
+
+	rslt = make([][4]int64, 0)
 	reader := bufio.NewReader(file)
 
-	load.Current = [][4]int64{}
 	line, err = reader.ReadString('\n')
 	for err == nil {
 		fields = strings.Fields(line)
-		if strings.HasPrefix(fields[0], "cpu") && fields[0] != "cpu" {
-			load.Current = append(load.Current, convtoint(fields[1:]))
+		if strings.HasPrefix(fields[0], "cpu") {
+			rslt = append(rslt, convtoint(fields[1:]))
 		}
 		line, err = reader.ReadString('\n') 
 	}
-	file.Close()
 
-	return nil
+	if err == io.EOF { err = nil }
+	return
 }
 
-func (load *CPULoad) renew(load_next *CPULoad) error {
+func (load *CPULoad) ProbeInit() (err error) {
+	rslt, err := getstat()
+	load.Current = rslt
+	load.Items = make([]CPUItem, len(rslt))
+	return err
+}
+
+func (load *CPULoad) Probe() (err error) {
 	var all float32
 	var diff [4]float32
 
-	if len(load.Current) != len(load_next.Current) {
+	rslt, err := getstat()
+	if len(load.Current) != len(rslt) {
 		return errors.New("different CPU numbers")
 	}
-	load.Items = make([]CPUItem, len(load.Current))
 
 	for i := 0; i < len(load.Current); i++ {
 		all = 0
 		for j := 0; j < 4; j++ {
-			diff[j] = float32(load_next.Current[i][j] - load.Current[i][j])
+			diff[j] = float32(rslt[i][j] - load.Current[i][j])
 			all += diff[j]
 		}
 		load.Items[i].Rate_user = uint8(diff[0] / all * 255)
@@ -109,29 +119,7 @@ func (load *CPULoad) renew(load_next *CPULoad) error {
 		load.Items[i].Rate_idle = uint8(diff[3] / all * 255)
 	}
 
-	load.Current = load_next.Current
-	return nil
-}
-
-func (load *CPULoad) ProbeInit() error {
-	err := load.getstat()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (load *CPULoad) Probe() error {
-	var err error
-	var load_cur CPULoad
-	err = load_cur.getstat()
-	if err != nil {
-		return err
-	}
-	err = load.renew(&load_cur)
-	if err != nil {
-		return err
-	}
+	load.Current = rslt
 	return nil
 }
 
