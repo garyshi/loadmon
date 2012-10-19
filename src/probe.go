@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"strconv"
 	"io/ioutil"
-	"time"
 )
 
 func (load *ProcLoad) Probe() error {
@@ -67,8 +66,7 @@ func (m *LoadMessage) ProbeRotate() error {
 }
 
 func (m *LoadMessage) Probe() error {
-	// seconds from 2000-01-01 00:00:00 UTC, can work till year 2136
-	m.Timestamp = uint32(time.Now().Unix() - 946684800)
+	m.Timestamp = GetTimestamp()
 
 	if err := m.Proc_load.Probe(); err != nil { return err }
 	if err := m.Cpu_load.Probe(); err != nil { return err }
