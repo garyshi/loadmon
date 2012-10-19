@@ -2,46 +2,28 @@ package main
 
 import (
 	"os"
+	"net"
 	"fmt"
 	"log"
 	"flag"
+	"time"
 	"bytes"
 	"strings"
-	"time"
-	"io"
-	"net"
 	"encoding/hex"
 )
 
 type LoadPeer struct {
-	ipaddr *net.IP
 	addr *net.UDPAddr
 	conn *net.UDPConn
 	logfile *os.File
 }
 
-func (m *LoadMessage) Dump(w io.Writer) {
-	fmt.Fprintln(w, "timestamp:", m.Timestamp)
-	fmt.Fprintln(w, "interval:", m.Interval)
-	fmt.Fprintf(w, "uptime: %.2f %.2f\n", m.Proc_load.Uptime_total, m.Proc_load.Uptime_idle)
-	fmt.Fprintf(w, "loadavg: %.2f %.2f %.2f\n", m.Proc_load.Loadavg[0], m.Proc_load.Loadavg[1], m.Proc_load.Loadavg[2])
-	fmt.Fprintf(w, "procs: all %d, running %d, iowait %d, zombie %d\n", m.Proc_load.Procs_all,
-		m.Proc_load.Procs_running, m.Proc_load.Procs_iowait, m.Proc_load.Procs_zombie)
-
-	for i := 0; i < len(m.Cpu_load.Items); i ++ {
-		fmt.Fprintf(w, "cpu%d: user %d, sys %d, iowait %d, idle %d\n", i,
-			m.Cpu_load.Items[i].Rate_user, m.Cpu_load.Items[i].Rate_sys,
-			m.Cpu_load.Items[i].Rate_iowait, m.Cpu_load.Items[i].Rate_idle)
-	}
-}
-
-func Sender(interval int, logfile io.Writer, peers []LoadPeer) {
+func Sender(interval int, logfile *LogFile, peers []LoadPeer) {
 	lm := LoadMessage{Interval:uint16(interval)}
 	lm.ProbeInit()
 
 	for {
 		var buffer bytes.Buffer
-
 		time.Sleep(time.Duration(lm.Interval) * time.Second)
 
 		lm.Probe()
@@ -51,11 +33,10 @@ func Sender(interval int, logfile io.Writer, peers []LoadPeer) {
 
 		fmt.Println()
 		fmt.Println("Local LoadMessage")
-		dumper := hex.Dumper(os.Stdout)
-		dumper.Write(buffer.Bytes())
+		hex.Dumper(os.Stdout).Write(buffer.Bytes())
 		fmt.Println()
 		lm.Dump(os.Stdout)
-		//lm.WriteLog(logfile)
+		logfile.WriteMessage(buffer.Bytes())
 
 		for _,peer := range peers {
 			peer.conn.Write(buffer.Bytes())
@@ -80,7 +61,7 @@ func Receiver(port int, peers []LoadPeer) {
 		if n == len(buf) { fmt.Println("Warning: received very long packet") }
 
 		for _,peer := range peers {
-			if !addr.IP.Equal(*peer.ipaddr) { continue }
+			if !addr.IP.Equal(peer.addr.IP) { continue }
 			err = lm.Decode(bytes.NewReader(buf[:n]))
 			if err != nil { fmt.Println("Error decode packet:", err) }
 			fmt.Fprintln(peer.logfile)
@@ -108,7 +89,6 @@ func main() {
 			if strings.Index(ss, ":") < 0 { ss = fmt.Sprintf("%s:%d", ss, *f_port) }
 			peers[i].addr,err = net.ResolveUDPAddr("udp", ss)
 			if err != nil { log.Fatal("invalid peer address:", ss) }
-			peers[i].ipaddr = &peers[i].addr.IP
 			peers[i].conn,err = net.DialUDP("udp", nil, peers[i].addr)
 			if err != nil { log.Fatal("failed connect to udp:", peers[i].addr) }
 			if *f_server {
@@ -124,7 +104,12 @@ func main() {
 	}
 
 	if *f_monitor {
-		Sender(1, nil, peers)
+		now := time.Now()
+		hostname,err := os.Hostname()
+		if err != nil { hostname = "localhost" }
+		filename := LogFileName("", hostname, &now)
+		logfile,err := OpenLogFile(filename, MODE_APPEND)
+		Sender(1, logfile, peers)
 	} else {
 		for { time.Sleep(1 * time.Second) }
 	}
