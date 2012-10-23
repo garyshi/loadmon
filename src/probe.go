@@ -160,8 +160,6 @@ func (load *MemoryLoad) Probe() (err error) {
 func ioload_convtoint(fields []string) [4]int64 {
 	var i1, i2, i3, i4 int64
 
-	fmt.Println(fields[2])
-
 	i1, _ = strconv.ParseInt(fields[3], 0, 64)
 	i2, _ = strconv.ParseInt(fields[5], 0, 64)
 	i3, _ = strconv.ParseInt(fields[7], 0, 64)
@@ -200,6 +198,7 @@ func (load *IOLoad) ProbeInit() (err error) {
 	rslt, err := ioload_getstat()
 	load.Current = rslt;
 	load.Items = make([]DiskItem, len(rslt))
+	return
 }
 
 func (load *IOLoad) Probe() (err error) {
@@ -210,10 +209,10 @@ func (load *IOLoad) Probe() (err error) {
 	}
 
 	for i := 0; i < len(load.Current); i++ {
-		load.Item[i].blk_read = rslt[i][0] - load.Current[i][0]
-		load.Item[i].byte_read = rslt[i][1] - load.Current[i][1]
-		load.Item[i].blk_written = rslt[i][2] - load.Current[i][2]
-		load.Item[i].byte_written = rslt[i][3] - load.Current[i][3]
+		load.Items[i].blk_read = uint32(rslt[i][0] - load.Current[i][0])
+		load.Items[i].byte_read = uint32(rslt[i][1] - load.Current[i][1])
+		load.Items[i].blk_written = uint32(rslt[i][2] - load.Current[i][2])
+		load.Items[i].byte_written = uint32(rslt[i][3] - load.Current[i][3])
 	}
 
 	load.Current = rslt
