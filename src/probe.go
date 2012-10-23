@@ -121,8 +121,108 @@ func (load *CPULoad) Probe() (err error) {
 	return nil
 }
 
+func (load *MemoryLoad) Probe() (err error) {
+	var value int64
+	var line string
+	var fields []string
+
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		fmt.Println(fmt.Errorf("MemoryLoad.Probe: failed optn /proc/meminfo"))
+		return
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+
+	line, err = reader.ReadString('\n')
+	for err == nil {
+		fields = strings.Split(line, ":")
+		fields[1] = strings.Trim(fields[1], " kbB\r\n")
+		value, err = strconv.ParseInt(fields[1], 0, 32)
+		if err != nil { return }
+		switch{
+		case fields[0] == "MemFree": load.free = uint32(value)
+		case fields[0] == "Buffers": load.buffers = uint32(value)
+		case fields[0] == "Cached": load.cached = uint32(value)
+		case fields[0] == "Dirty": load.dirty = uint32(value)
+		case fields[0] == "Active": load.active = uint32(value)
+		case fields[0] == "SwapCached": load.swapcached = uint32(value)
+		case fields[0] == "SwapTotal": load.swaptotal = uint32(value)
+		case fields[0] == "SwapFree": load.swapfree = uint32(value)
+		}
+		line, err = reader.ReadString('\n') 
+	}
+
+	if err == io.EOF { err = nil }
+	return
+}
+
+func ioload_convtoint(fields []string) [4]int64 {
+	var i1, i2, i3, i4 int64
+
+	fmt.Println(fields[2])
+
+	i1, _ = strconv.ParseInt(fields[3], 0, 64)
+	i2, _ = strconv.ParseInt(fields[5], 0, 64)
+	i3, _ = strconv.ParseInt(fields[7], 0, 64)
+	i4, _ = strconv.ParseInt(fields[9], 0, 64)
+	return [4]int64{i1, i2 * 512, i3, i4 * 512}
+}
+
+func ioload_getstat() (rslt [][4]int64, err error) {
+	var line string
+	var fields []string
+
+	file, err := os.Open("/proc/diskstats")
+	if err != nil {
+		fmt.Println(fmt.Errorf("IOLoad.Probe: failed optn /proc/diskstats"))
+		return
+	}
+	defer file.Close()
+
+	rslt = make([][4]int64, 0)
+	reader := bufio.NewReader(file)
+
+	line, err = reader.ReadString('\n')
+	for err == nil {
+		fields = strings.Fields(line)
+		if strings.HasPrefix(fields[2], "sd") && len(fields[2]) == 3 {
+			rslt = append(rslt, ioload_convtoint(fields))
+		}
+		line, err = reader.ReadString('\n') 
+	}
+
+	if err == io.EOF { err = nil }
+	return
+}
+
+func (load *IOLoad) ProbeInit() (err error) {
+	rslt, err := ioload_getstat()
+	load.Current = rslt;
+	load.Items = make([]DiskItem, len(rslt))
+}
+
+func (load *IOLoad) Probe() (err error) {
+
+	rslt, err := ioload_getstat()
+	if len(load.Current) != len(rslt) {
+		return errors.New("different sdX numbers")
+	}
+
+	for i := 0; i < len(load.Current); i++ {
+		load.Item[i].blk_read = rslt[i][0] - load.Current[i][0]
+		load.Item[i].byte_read = rslt[i][1] - load.Current[i][1]
+		load.Item[i].blk_written = rslt[i][2] - load.Current[i][2]
+		load.Item[i].byte_written = rslt[i][3] - load.Current[i][3]
+	}
+
+	load.Current = rslt
+	return nil
+}
+
 func (m *LoadMessage) ProbeInit() error {
 	m.Cpu_load.ProbeInit()
+	m.Io_load.ProbeInit()
 	return nil
 }
 
@@ -135,6 +235,8 @@ func (m *LoadMessage) Probe() error {
 
 	if err := m.Proc_load.Probe(); err != nil { return err }
 	if err := m.Cpu_load.Probe(); err != nil { return err }
+	if err := m.Mem_load.Probe(); err != nil { return err }
+	if err := m.Io_load.Probe(); err != nil { return err }
 
 	return nil
 }

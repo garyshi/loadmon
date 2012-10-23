@@ -41,13 +41,22 @@ type MemoryLoad struct {
 	free, buffers, cached, dirty, active, swapcached, swaptotal, swapfree uint32
 }
 
+type DiskItem struct {
+	blk_read, blk_written, byte_read, byte_written uint32
+}
+
+type IOLoad struct {
+	Items []DiskItem
+	Current [][4]int64
+}
+
 type LoadMessage struct {
 	Interval uint16
 	Timestamp uint32 // timestamp: seconds from 2010-01-01 00:00:00
 
 	Proc_load ProcLoad
 	Cpu_load CPULoad
-	//Mem_load MemoryLoad
-	//Io_load IOLoad
+	Mem_load MemoryLoad
+	Io_load IOLoad
 	//Net_load NetworkLoad
 }
