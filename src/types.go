@@ -42,11 +42,13 @@ type MemoryLoad struct {
 }
 
 type DiskItem struct {
+	name string
 	blk_read, blk_written, byte_read, byte_written uint32
 }
 
 type IOLoad struct {
 	Items []DiskItem
+	names []string
 	Current [][4]int64
 }
 

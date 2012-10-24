@@ -167,7 +167,7 @@ func ioload_convtoint(fields []string) [4]int64 {
 	return [4]int64{i1, i2 * 512, i3, i4 * 512}
 }
 
-func ioload_getstat() (rslt [][4]int64, err error) {
+func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 	var line string
 	var fields []string
 
@@ -186,6 +186,7 @@ func ioload_getstat() (rslt [][4]int64, err error) {
 		fields = strings.Fields(line)
 		if strings.HasPrefix(fields[2], "sd") && len(fields[2]) == 3 {
 			rslt = append(rslt, ioload_convtoint(fields))
+			names = append(names, fields[2])
 		}
 		line, err = reader.ReadString('\n') 
 	}
@@ -195,15 +196,15 @@ func ioload_getstat() (rslt [][4]int64, err error) {
 }
 
 func (load *IOLoad) ProbeInit() (err error) {
-	rslt, err := ioload_getstat()
+	rslt, names, err := ioload_getstat()
 	load.Current = rslt;
+	load.names = names
 	load.Items = make([]DiskItem, len(rslt))
 	return
 }
 
 func (load *IOLoad) Probe() (err error) {
-
-	rslt, err := ioload_getstat()
+	rslt, names, err := ioload_getstat()
 	if len(load.Current) != len(rslt) {
 		return errors.New("different sdX numbers")
 	}
@@ -213,6 +214,7 @@ func (load *IOLoad) Probe() (err error) {
 		load.Items[i].byte_read = uint32(rslt[i][1] - load.Current[i][1])
 		load.Items[i].blk_written = uint32(rslt[i][2] - load.Current[i][2])
 		load.Items[i].byte_written = uint32(rslt[i][3] - load.Current[i][3])
+		load.Items[i].name = names[i]
 	}
 
 	load.Current = rslt
