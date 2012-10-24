@@ -48,7 +48,16 @@ type DiskItem struct {
 
 type IOLoad struct {
 	Items []DiskItem
-	names []string
+	Current [][4]int64
+}
+
+type InterfaceItem struct {
+	name string
+	pkt_read, pkt_written, byte_read, byte_written uint32
+}
+
+type NetworkLoad struct {
+	Items []InterfaceItem
 	Current [][4]int64
 }
 
@@ -60,5 +69,5 @@ type LoadMessage struct {
 	Cpu_load CPULoad
 	Mem_load MemoryLoad
 	Io_load IOLoad
-	//Net_load NetworkLoad
+	Net_load NetworkLoad
 }

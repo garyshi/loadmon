@@ -49,4 +49,13 @@ func (m *LoadMessage) Dump(w io.Writer) {
 			m.Io_load.Items[i].blk_written, m.Io_load.Items[i].byte_written,
 			)
 	}
+
+	for i := 0; i < len(m.Net_load.Items); i++ {
+		fmt.Fprintf(w, "net %s: pkt_read %d, byte_read %d, pkt_written %d, byte_written %d\n",
+			m.Net_load.Items[i].name,
+			m.Net_load.Items[i].pkt_read, m.Net_load.Items[i].byte_read,
+			m.Net_load.Items[i].pkt_written, m.Net_load.Items[i].byte_written,
+			)
+		
+	}
 }

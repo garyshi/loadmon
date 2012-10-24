@@ -73,9 +73,7 @@ func cpuload_getstat() (rslt [][4]int64, err error) {
 	}
 	defer file.Close()
 
-	rslt = make([][4]int64, 0)
 	reader := bufio.NewReader(file)
-
 	line, err = reader.ReadString('\n')
 	for err == nil {
 		fields = strings.Fields(line)
@@ -178,9 +176,7 @@ func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 	}
 	defer file.Close()
 
-	rslt = make([][4]int64, 0)
 	reader := bufio.NewReader(file)
-
 	line, err = reader.ReadString('\n')
 	for err == nil {
 		fields = strings.Fields(line)
@@ -196,9 +192,8 @@ func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 }
 
 func (load *IOLoad) ProbeInit() (err error) {
-	rslt, names, err := ioload_getstat()
-	load.Current = rslt;
-	load.names = names
+	rslt, _, err := ioload_getstat()
+	load.Current = rslt
 	load.Items = make([]DiskItem, len(rslt))
 	return
 }
@@ -221,9 +216,73 @@ func (load *IOLoad) Probe() (err error) {
 	return nil
 }
 
+func network_convtoint(fields []string) [4]int64 {
+	var i1, i2, i3, i4 int64
+
+	i1, _ = strconv.ParseInt(fields[1], 0, 64)
+	i2, _ = strconv.ParseInt(fields[2], 0, 64)
+	i3, _ = strconv.ParseInt(fields[9], 0, 64)
+	i4, _ = strconv.ParseInt(fields[10], 0, 64)
+	return [4]int64{i1, i2, i3, i4}
+}
+
+func network_getstat() (rslt [][4]int64, names []string, err error) {
+	var line string
+	var fields []string
+
+	file, err := os.Open("/proc/net/dev")
+	if err != nil {
+		fmt.Println(fmt.Errorf("Network.Probe: failed optn /proc/net/dev"))
+		return
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+
+	line, err = reader.ReadString('\n')
+	line, err = reader.ReadString('\n')
+
+	line, err = reader.ReadString('\n')
+	for err == nil {
+		fields = strings.Fields(line)
+		names = append(names, strings.Trim(fields[0], ":"))
+		rslt = append(rslt, network_convtoint(fields))
+		line, err = reader.ReadString('\n') 
+	}
+
+	if err == io.EOF { err = nil }
+	return
+}
+
+func (load *NetworkLoad) ProbeInit() (err error) {
+	rslt, _, err := network_getstat()
+	load.Current = rslt
+	load.Items = make([]InterfaceItem, len(rslt))
+	return
+}
+
+func (load *NetworkLoad) Probe() (err error) {
+	rslt, names, err := network_getstat()
+	if len(load.Current) != len(rslt) {
+		return errors.New("different network numbers")
+	}
+
+	for i := 0; i < len(load.Current); i++ {
+		load.Items[i].byte_read = uint32(rslt[i][0] - load.Current[i][0])
+		load.Items[i].pkt_read = uint32(rslt[i][1] - load.Current[i][1])
+		load.Items[i].byte_written = uint32(rslt[i][2] - load.Current[i][2])
+		load.Items[i].pkt_written = uint32(rslt[i][3] - load.Current[i][3])
+		load.Items[i].name = names[i]
+	}
+
+	load.Current = rslt
+	return nil
+}
+
 func (m *LoadMessage) ProbeInit() error {
 	m.Cpu_load.ProbeInit()
 	m.Io_load.ProbeInit()
+	m.Net_load.ProbeInit()
 	return nil
 }
 
@@ -238,6 +297,7 @@ func (m *LoadMessage) Probe() error {
 	if err := m.Cpu_load.Probe(); err != nil { return err }
 	if err := m.Mem_load.Probe(); err != nil { return err }
 	if err := m.Io_load.Probe(); err != nil { return err }
+	if err := m.Net_load.Probe(); err != nil { return err }
 
 	return nil
 }
