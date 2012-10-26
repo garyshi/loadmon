@@ -69,6 +69,81 @@ func (load *CPULoad) Decode(splen uint8, r io.Reader) error {
 	return nil
 }
 
+func (load *MemoryLoad) Encode() (uint8, *bytes.Buffer) {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, load.free)
+	binary.Write(buf, binary.BigEndian, load.buffers)
+	binary.Write(buf, binary.BigEndian, load.cached)
+	binary.Write(buf, binary.BigEndian, load.dirty)
+	binary.Write(buf, binary.BigEndian, load.active)
+	binary.Write(buf, binary.BigEndian, load.swaptotal)
+	binary.Write(buf, binary.BigEndian, load.swapfree)
+	binary.Write(buf, binary.BigEndian, load.swapcached)
+	return SPC_MemoryLoad, buf
+}
+
+func (load *MemoryLoad) Decode(splen uint8, r io.Reader) (err error) {
+	if splen != 32 { return fmt.Errorf("MemoryLoad.Decode: invalid subpacket size (%d)", splen) }
+
+	binary.Read(r, binary.BigEndian, &load.free)
+	binary.Read(r, binary.BigEndian, &load.buffers)
+	binary.Read(r, binary.BigEndian, &load.cached)
+	binary.Read(r, binary.BigEndian, &load.dirty)
+	binary.Read(r, binary.BigEndian, &load.active)
+	binary.Read(r, binary.BigEndian, &load.swaptotal)
+	binary.Read(r, binary.BigEndian, &load.swapfree)
+	binary.Read(r, binary.BigEndian, &load.swapcached)
+
+	return nil
+}
+
+func (load *IOLoad) Encode() (uint8, *bytes.Buffer) {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, uint8(len(load.Items)))
+
+	for _,item := range load.Items {
+		binary.Write(buf, binary.BigEndian, uint8(len(item.name)))
+		buf.Write([]byte(item.name))
+		binary.Write(buf, binary.BigEndian, item.tps_read)
+		binary.Write(buf, binary.BigEndian, item.tps_written)
+		binary.Write(buf, binary.BigEndian, item.kbytes_read)
+		binary.Write(buf, binary.BigEndian, item.kbytes_written)
+	}
+
+	return SPC_IOLoad, buf
+}
+
+func (load *IOLoad) Decode(splen uint8, r io.Reader) (err error) {
+	var i, num_items, namelen uint8
+
+	err = binary.Read(r, binary.BigEndian, &num_items)
+	if err != nil { return }
+	load.Items = make([]DiskItem, num_items);
+
+	for i = 0; i < num_items; i ++ {
+		err = binary.Read(r, binary.BigEndian, &namelen)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].tps_read)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].tps_written)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].kbytes_read)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].kbytes_written)
+		if err != nil { return }
+	}
+
+	return nil
+}
+
+/*
+func (load *NetworkLoad) Encode() (uint8, *bytes.Buffer) {
+}
+
+func (load *NetworkLoad) Decode(splen uint8, r io.Reader) error {
+}
+*/
+
 func EncodeSubpacket(sp Subpacket, w io.Writer) error {
 	spcode,buf := sp.Encode()
 	if buf.Len() > 255 { panic("Subpacket size overflow") }
@@ -91,6 +166,7 @@ func (m *LoadMessage) Encode(w io.Writer) error {
 	// load data
 	if err = EncodeSubpacket(&m.Proc_load, w); err != nil { return err }
 	if err = EncodeSubpacket(&m.Cpu_load, w); err != nil { return err }
+	if err = EncodeSubpacket(&m.Mem_load, w); err != nil { return err }
 
 	return nil
 }
@@ -124,6 +200,9 @@ func (m *LoadMessage) Decode(r io.Reader) error {
 			if err != nil { return err }
 		case SPC_CPULoad:
 			err = m.Cpu_load.Decode(splen, spreader)
+			if err != nil { return err }
+		case SPC_MemoryLoad:
+			err = m.Mem_load.Decode(splen, spreader)
 			if err != nil { return err }
 		default:
 			return fmt.Errorf("unknown subpacket code")

@@ -184,7 +184,7 @@ func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 			rslt = append(rslt, ioload_convtoint(fields))
 			names = append(names, fields[2])
 		}
-		line, err = reader.ReadString('\n') 
+		line, err = reader.ReadString('\n')
 	}
 
 	if err == io.EOF { err = nil }

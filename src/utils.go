@@ -42,6 +42,7 @@ func (m *LoadMessage) Dump(w io.Writer) {
 	fmt.Fprintf(w, "mem swap: cached %d, total %d, free %d\n",
 		m.Mem_load.swapcached, m.Mem_load.swaptotal, m.Mem_load.swapfree)
 
+/*
 	for i := 0; i < len(m.Io_load.Items); i++ {
 		fmt.Fprintf(w, "drv %s: tps_read %d, kbytes_read %d, tps_written %d, kbytes_written %d\n",
 			m.Io_load.Items[i].name,
@@ -58,4 +59,5 @@ func (m *LoadMessage) Dump(w io.Writer) {
 			)
 		
 	}
+*/
 }
