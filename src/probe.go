@@ -206,9 +206,9 @@ func (load *IOLoad) Probe() (err error) {
 
 	for i := 0; i < len(load.Current); i++ {
 		load.Items[i].tps_read = uint32(rslt[i][0] - load.Current[i][0])
-		load.Items[i].kbyte_read = uint32(rslt[i][1] - load.Current[i][1])
+		load.Items[i].kbytes_read = uint32(rslt[i][1] - load.Current[i][1])
 		load.Items[i].tps_written = uint32(rslt[i][2] - load.Current[i][2])
-		load.Items[i].kbyte_written = uint32(rslt[i][3] - load.Current[i][3])
+		load.Items[i].kbytes_written = uint32(rslt[i][3] - load.Current[i][3])
 		load.Items[i].name = names[i]
 	}
 
@@ -268,10 +268,10 @@ func (load *NetworkLoad) Probe() (err error) {
 	}
 
 	for i := 0; i < len(load.Current); i++ {
-		load.Items[i].kbyte_read = uint32(rslt[i][0] - load.Current[i][0])
-		load.Items[i].pkt_read = uint32(rslt[i][1] - load.Current[i][1])
-		load.Items[i].kbyte_written = uint32(rslt[i][2] - load.Current[i][2])
-		load.Items[i].pkt_written = uint32(rslt[i][3] - load.Current[i][3])
+		load.Items[i].kbytes_read = uint32(rslt[i][0] - load.Current[i][0])
+		load.Items[i].pkts_read = uint32(rslt[i][1] - load.Current[i][1])
+		load.Items[i].kbytes_written = uint32(rslt[i][2] - load.Current[i][2])
+		load.Items[i].pkts_written = uint32(rslt[i][3] - load.Current[i][3])
 		load.Items[i].name = names[i]
 	}
 

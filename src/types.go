@@ -43,7 +43,7 @@ type MemoryLoad struct {
 
 type DiskItem struct {
 	name string
-	tps_read, tps_written, kbyte_read, kbyte_written uint32
+	tps_read, tps_written, kbytes_read, kbytes_written uint32
 }
 
 type IOLoad struct {
@@ -53,7 +53,7 @@ type IOLoad struct {
 
 type InterfaceItem struct {
 	name string
-	pkt_read, pkt_written, kbyte_read, kbyte_written uint32
+	pkts_read, pkts_written, kbytes_read, kbytes_written uint32
 }
 
 type NetworkLoad struct {
