@@ -136,13 +136,44 @@ func (load *IOLoad) Decode(splen uint8, r io.Reader) (err error) {
 	return nil
 }
 
-/*
 func (load *NetworkLoad) Encode() (uint8, *bytes.Buffer) {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, uint8(len(load.Items)))
+
+	for _,item := range load.Items {
+		binary.Write(buf, binary.BigEndian, uint8(len(item.name)))
+		buf.Write([]byte(item.name))
+		binary.Write(buf, binary.BigEndian, item.pkts_read)
+		binary.Write(buf, binary.BigEndian, item.pkts_written)
+		binary.Write(buf, binary.BigEndian, item.kbytes_read)
+		binary.Write(buf, binary.BigEndian, item.kbytes_written)
+	}
+
+	return SPC_NetworkLoad, buf
 }
 
-func (load *NetworkLoad) Decode(splen uint8, r io.Reader) error {
+func (load *NetworkLoad) Decode(splen uint8, r io.Reader) (err error) {
+	var i, num_items, namelen uint8
+
+	err = binary.Read(r, binary.BigEndian, &num_items)
+	if err != nil { return }
+	load.Items = make([]InterfaceItem, num_items);
+
+	for i = 0; i < num_items; i ++ {
+		err = binary.Read(r, binary.BigEndian, &namelen)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].pkts_read)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].pkts_written)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].kbytes_read)
+		if err != nil { return }
+		err = binary.Read(r, binary.BigEndian, &load.Items[i].kbytes_written)
+		if err != nil { return }
+	}
+
+	return nil
 }
-*/
 
 func EncodeSubpacket(sp Subpacket, w io.Writer) error {
 	spcode,buf := sp.Encode()
@@ -167,6 +198,8 @@ func (m *LoadMessage) Encode(w io.Writer) error {
 	if err = EncodeSubpacket(&m.Proc_load, w); err != nil { return err }
 	if err = EncodeSubpacket(&m.Cpu_load, w); err != nil { return err }
 	if err = EncodeSubpacket(&m.Mem_load, w); err != nil { return err }
+	if err = EncodeSubpacket(&m.Io_load, w); err != nil { return err }
+	if err = EncodeSubpacket(&m.Net_load, w); err != nil { return err }
 
 	return nil
 }
@@ -203,6 +236,12 @@ func (m *LoadMessage) Decode(r io.Reader) error {
 			if err != nil { return err }
 		case SPC_MemoryLoad:
 			err = m.Mem_load.Decode(splen, spreader)
+			if err != nil { return err }
+		case SPC_IOLoad:
+			err = m.Io_load.Decode(splen, spreader)
+			if err != nil { return err }
+		case SPC_NetworkLoad:
+			err = m.Net_load.Decode(splen, spreader)
 			if err != nil { return err }
 		default:
 			return fmt.Errorf("unknown subpacket code")
