@@ -43,18 +43,18 @@ func (m *LoadMessage) Dump(w io.Writer) {
 		m.Mem_load.swapcached, m.Mem_load.swaptotal, m.Mem_load.swapfree)
 
 	for i := 0; i < len(m.Io_load.Items); i++ {
-		fmt.Fprintf(w, "drv %s: blk_read %d, byte_read %d, blk_written %d, byte_written %d\n",
+		fmt.Fprintf(w, "drv %s: tps_read %d, kbyte_read %d, tps_written %d, kbyte_written %d\n",
 			m.Io_load.Items[i].name,
-			m.Io_load.Items[i].blk_read, m.Io_load.Items[i].byte_read,
-			m.Io_load.Items[i].blk_written, m.Io_load.Items[i].byte_written,
+			m.Io_load.Items[i].tps_read, m.Io_load.Items[i].kbyte_read,
+			m.Io_load.Items[i].tps_written, m.Io_load.Items[i].kbyte_written,
 			)
 	}
 
 	for i := 0; i < len(m.Net_load.Items); i++ {
-		fmt.Fprintf(w, "net %s: pkt_read %d, byte_read %d, pkt_written %d, byte_written %d\n",
+		fmt.Fprintf(w, "net %s: pkt_read %d, kbyte_read %d, pkt_written %d, kbyte_written %d\n",
 			m.Net_load.Items[i].name,
-			m.Net_load.Items[i].pkt_read, m.Net_load.Items[i].byte_read,
-			m.Net_load.Items[i].pkt_written, m.Net_load.Items[i].byte_written,
+			m.Net_load.Items[i].pkt_read, m.Net_load.Items[i].kbyte_read,
+			m.Net_load.Items[i].pkt_written, m.Net_load.Items[i].kbyte_written,
 			)
 		
 	}

@@ -162,7 +162,7 @@ func ioload_convtoint(fields []string) [4]int64 {
 	i2, _ = strconv.ParseInt(fields[5], 0, 64)
 	i3, _ = strconv.ParseInt(fields[7], 0, 64)
 	i4, _ = strconv.ParseInt(fields[9], 0, 64)
-	return [4]int64{i1, i2 * 512, i3, i4 * 512}
+	return [4]int64{i1, (i2 + 1) / 2, i3, (i4 + 1) / 2}
 }
 
 func ioload_getstat() (rslt [][4]int64, names []string, err error) {
@@ -205,10 +205,10 @@ func (load *IOLoad) Probe() (err error) {
 	}
 
 	for i := 0; i < len(load.Current); i++ {
-		load.Items[i].blk_read = uint32(rslt[i][0] - load.Current[i][0])
-		load.Items[i].byte_read = uint32(rslt[i][1] - load.Current[i][1])
-		load.Items[i].blk_written = uint32(rslt[i][2] - load.Current[i][2])
-		load.Items[i].byte_written = uint32(rslt[i][3] - load.Current[i][3])
+		load.Items[i].tps_read = uint32(rslt[i][0] - load.Current[i][0])
+		load.Items[i].kbyte_read = uint32(rslt[i][1] - load.Current[i][1])
+		load.Items[i].tps_written = uint32(rslt[i][2] - load.Current[i][2])
+		load.Items[i].kbyte_written = uint32(rslt[i][3] - load.Current[i][3])
 		load.Items[i].name = names[i]
 	}
 
@@ -223,7 +223,7 @@ func network_convtoint(fields []string) [4]int64 {
 	i2, _ = strconv.ParseInt(fields[2], 0, 64)
 	i3, _ = strconv.ParseInt(fields[9], 0, 64)
 	i4, _ = strconv.ParseInt(fields[10], 0, 64)
-	return [4]int64{i1, i2, i3, i4}
+	return [4]int64{(i1 + 1023) / 1024, i2, (i3 + 1023) / 1024, i4}
 }
 
 func network_getstat() (rslt [][4]int64, names []string, err error) {
@@ -268,9 +268,9 @@ func (load *NetworkLoad) Probe() (err error) {
 	}
 
 	for i := 0; i < len(load.Current); i++ {
-		load.Items[i].byte_read = uint32(rslt[i][0] - load.Current[i][0])
+		load.Items[i].kbyte_read = uint32(rslt[i][0] - load.Current[i][0])
 		load.Items[i].pkt_read = uint32(rslt[i][1] - load.Current[i][1])
-		load.Items[i].byte_written = uint32(rslt[i][2] - load.Current[i][2])
+		load.Items[i].kbyte_written = uint32(rslt[i][2] - load.Current[i][2])
 		load.Items[i].pkt_written = uint32(rslt[i][3] - load.Current[i][3])
 		load.Items[i].name = names[i]
 	}
