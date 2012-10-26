@@ -23,7 +23,7 @@ func GetTimestamp() uint32 {
 }
 
 func (m *LoadMessage) Dump(w io.Writer) {
-	fmt.Fprintln(w, "timestamp:", m.Timestamp)
+	fmt.Fprintln(w, "timestamp:", FromTimestamp(m.Timestamp).Format("20060102-150405"))
 	fmt.Fprintln(w, "interval:", m.Interval)
 	fmt.Fprintf(w, "uptime: %.2f %.2f\n", m.Proc_load.Uptime_total, m.Proc_load.Uptime_idle)
 	fmt.Fprintf(w, "loadavg: %.2f %.2f %.2f\n", m.Proc_load.Loadavg[0], m.Proc_load.Loadavg[1], m.Proc_load.Loadavg[2])

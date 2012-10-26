@@ -123,6 +123,10 @@ func (load *IOLoad) Decode(splen uint8, r io.Reader) (err error) {
 	for i = 0; i < num_items; i ++ {
 		err = binary.Read(r, binary.BigEndian, &namelen)
 		if err != nil { return }
+		namebuf := make([]byte, namelen)
+		_,err = io.ReadFull(r, namebuf)
+		if err != nil { return }
+		load.Items[i].name = string(namebuf)
 		err = binary.Read(r, binary.BigEndian, &load.Items[i].tps_read)
 		if err != nil { return }
 		err = binary.Read(r, binary.BigEndian, &load.Items[i].tps_written)
@@ -162,6 +166,10 @@ func (load *NetworkLoad) Decode(splen uint8, r io.Reader) (err error) {
 	for i = 0; i < num_items; i ++ {
 		err = binary.Read(r, binary.BigEndian, &namelen)
 		if err != nil { return }
+		namebuf := make([]byte, namelen)
+		_,err = io.ReadFull(r, namebuf)
+		if err != nil { return }
+		load.Items[i].name = string(namebuf)
 		err = binary.Read(r, binary.BigEndian, &load.Items[i].pkts_read)
 		if err != nil { return }
 		err = binary.Read(r, binary.BigEndian, &load.Items[i].pkts_written)

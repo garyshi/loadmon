@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"net"
 	"fmt"
@@ -34,7 +35,6 @@ func Sender(interval int, logfile *LogFile, peers []LoadPeer) {
 		fmt.Println()
 		fmt.Printf("Local LoadMessage, size=%d\n", buffer.Len())
 		hex.Dumper(os.Stdout).Write(buffer.Bytes())
-		fmt.Println()
 		fmt.Println()
 		lm.Dump(os.Stdout)
 		logfile.WriteMessage(buffer.Bytes())
@@ -71,16 +71,51 @@ func Receiver(port int, peers []LoadPeer) {
 	}
 }
 
+func DumpLogFile(filename string) {
+	var lm LoadMessage
+
+	logfile,err := OpenLogFile(filename, MODE_READ)
+	if err != nil {
+		fmt.Println("Error open log file:", err)
+		return
+	}
+
+	for {
+		ts,buffer,err := logfile.ReadMessage()
+		if err != nil { break }
+		t := FromTimestamp(ts).Format("20060102-150405")
+		err = lm.Decode(bytes.NewReader(buffer))
+		if err != nil {
+			fmt.Println("Error decode packet:", err)
+			break
+		}
+
+		fmt.Println()
+		fmt.Printf("Read LoadMessage, local time %s, size=%d\n", t, len(buffer))
+		hex.Dumper(os.Stdout).Write(buffer)
+		fmt.Println()
+		lm.Dump(os.Stdout)
+	}
+
+	if err != nil && err != io.EOF { fmt.Println(err) }
+}
+
 func main() {
 	var err error
 	var peers []LoadPeer
 
 	now := time.Now()
+	f_readfile := flag.String("r", "", "decode log file")
 	f_server := flag.Bool("l", false, "server mode")
 	f_port := flag.Int("p", 9999, "udp port to listen and (default) send")
 	f_peers := flag.String("P", "", "peers, comma separated ipaddr[:port]")
 	f_monitor := flag.Bool("m", true, "monitor local computer")
 	flag.Parse()
+
+	if *f_readfile != "" {
+		DumpLogFile(*f_readfile)
+		return
+	}
 
 	if len(*f_peers) > 0 {
 		s := strings.Split(*f_peers, ",")

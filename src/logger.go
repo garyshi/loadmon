@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"fmt"
 	"time"
@@ -68,10 +69,18 @@ func (logfile *LogFile) WriteMessage(buf []byte) error {
 }
 
 func (logfile *LogFile) ReadMessage() (ts uint32, buf []byte, err error) {
-	if logfile.mode != MODE_APPEND && logfile.mode != MODE_REWRITE {
+	if logfile.mode != MODE_READ {
 		err = fmt.Errorf("invalid mode")
 		return
 	}
+
+	var msglen uint16
+	err = binary.Read(logfile.file, binary.BigEndian, &ts)
+	if err != nil { return }
+	err = binary.Read(logfile.file, binary.BigEndian, &msglen)
+	if err != nil { return }
+	buf = make([]byte, msglen)
+	_,err = io.ReadFull(logfile.file, buf)
 
 	return
 }
