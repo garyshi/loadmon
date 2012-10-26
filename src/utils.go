@@ -31,9 +31,11 @@ func (m *LoadMessage) Dump(w io.Writer) {
 		m.Proc_load.Procs_running, m.Proc_load.Procs_iowait, m.Proc_load.Procs_zombie)
 
 	for i := 0; i < len(m.Cpu_load.Items); i ++ {
-		fmt.Fprintf(w, "cpu%d: user %d, sys %d, iowait %d, idle %d\n", i,
-			m.Cpu_load.Items[i].Rate_user, m.Cpu_load.Items[i].Rate_sys,
-			m.Cpu_load.Items[i].Rate_iowait, m.Cpu_load.Items[i].Rate_idle)
+		fmt.Fprintf(w, "cpu%d: user %.1f%%, sys %.1f%%, iowait %.1f%%, idle %.1f%%\n", i,
+			float32(m.Cpu_load.Items[i].Rate_user) / 2.55,
+			float32(m.Cpu_load.Items[i].Rate_sys) / 2.55,
+			float32(m.Cpu_load.Items[i].Rate_iowait) / 2.55,
+			float32(m.Cpu_load.Items[i].Rate_idle) / 2.55)
 	}
 
 	fmt.Fprintf(w, "mem: free %d, buffers %d, cached %d, dirty %d, active %d\n",

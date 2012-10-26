@@ -109,10 +109,10 @@ func (load *CPULoad) Probe() (err error) {
 			diff[j] = float32(rslt[i][j] - load.Current[i][j])
 			all += diff[j]
 		}
-		load.Items[i].Rate_user = uint8(diff[0] / all * 255)
-		load.Items[i].Rate_sys = uint8(diff[1] / all * 255)
-		load.Items[i].Rate_iowait = uint8(diff[2] / all * 255)
-		load.Items[i].Rate_idle = uint8(diff[3] / all * 255)
+		load.Items[i].Rate_user = uint8(diff[0] / all * 255 + 0.5)
+		load.Items[i].Rate_sys = uint8(diff[1] / all * 255 + 0.5)
+		load.Items[i].Rate_iowait = uint8(diff[2] / all * 255 + 0.5)
+		load.Items[i].Rate_idle = uint8(diff[3] / all * 255 + 0.5)
 	}
 
 	load.Current = rslt

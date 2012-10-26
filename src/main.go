@@ -33,9 +33,11 @@ func Sender(interval int, logfile *LogFile, peers []LoadPeer) {
 		}
 
 		fmt.Println()
-		fmt.Printf("Local LoadMessage, size=%d\n", buffer.Len())
-		hex.Dumper(os.Stdout).Write(buffer.Bytes())
-		fmt.Println()
+		if *f_verbose > 1 {
+			fmt.Printf("Local LoadMessage, size=%d\n", buffer.Len())
+			hex.Dumper(os.Stdout).Write(buffer.Bytes())
+			fmt.Println()
+		}
 		lm.Dump(os.Stdout)
 		logfile.WriteMessage(buffer.Bytes())
 
@@ -91,25 +93,30 @@ func DumpLogFile(filename string) {
 		}
 
 		fmt.Println()
-		fmt.Printf("Read LoadMessage, local time %s, size=%d\n", t, len(buffer))
-		hex.Dumper(os.Stdout).Write(buffer)
-		fmt.Println()
+		if *f_verbose > 1 {
+			fmt.Printf("Read LoadMessage, local time %s, size=%d\n", t, len(buffer))
+			hex.Dumper(os.Stdout).Write(buffer)
+			fmt.Println()
+		}
 		lm.Dump(os.Stdout)
 	}
 
 	if err != nil && err != io.EOF { fmt.Println(err) }
 }
 
+var f_readfile = flag.String("r", "", "decode log file")
+var f_server = flag.Bool("l", false, "server mode")
+var f_port = flag.Int("p", 9999, "udp port to listen and (default) send")
+var f_peers = flag.String("P", "", "peers, comma separated ipaddr[:port]")
+var f_monitor = flag.Bool("m", true, "monitor local computer")
+var f_interval = flag.Int("i", 10, "local monitor interval")
+var f_verbose = flag.Int("v", 1, "verbose level")
+
 func main() {
 	var err error
 	var peers []LoadPeer
 
 	now := time.Now()
-	f_readfile := flag.String("r", "", "decode log file")
-	f_server := flag.Bool("l", false, "server mode")
-	f_port := flag.Int("p", 9999, "udp port to listen and (default) send")
-	f_peers := flag.String("P", "", "peers, comma separated ipaddr[:port]")
-	f_monitor := flag.Bool("m", true, "monitor local computer")
 	flag.Parse()
 
 	if *f_readfile != "" {
@@ -143,7 +150,7 @@ func main() {
 		if err != nil { hostname = "localhost" }
 		filename := LogFileName("", hostname, &now)
 		logfile,err := OpenLogFile(filename, MODE_APPEND)
-		Sender(1, logfile, peers)
+		Sender(*f_interval, logfile, peers)
 	} else {
 		for { time.Sleep(1 * time.Second) }
 	}
