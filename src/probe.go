@@ -54,8 +54,8 @@ func (load *ProcLoad) Probe() error {
 
 func Fields2Int(fields []string, cols []int) (rslt []int64, err error) {
 	var r int64
-	for i := range cols {
-		r, err = strconv.ParseInt(fields[i], 0, 64)
+	for _, v := range cols {
+		r, err = strconv.ParseInt(fields[v], 0, 64)
 		if err != nil { return }
 		rslt = append(rslt, r)
 	}
@@ -74,7 +74,7 @@ func cpuload_getstat() (rslt [][4]int64, err error) {
 		fields := strings.Fields(line)
 		if !strings.HasPrefix(fields[0], "cpu") { return }
 
-		i, err := sutils.Fields2Int(fields, []int{1,3,5,4})
+		i, err := Fields2Int(fields, []int{1,3,5,4})
 		if err != nil { return }
 		rslt = append(rslt, [4]int64{i[0], i[1], i[2], i[3]})
 		return
@@ -154,7 +154,7 @@ func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 		fields := strings.Fields(line)
 		if !strings.HasPrefix(fields[2], "sd") || len(fields[2]) != 3 { return }
 
-		i, err := sutils.Fields2Int(fields, []int{3,5,7,9})
+		i, err := Fields2Int(fields, []int{3,5,7,9})
 		if err != nil { return }
 		rslt = append(rslt, [4]int64{i[0], (i[1]+1)/2, i[2], (i[3]+1)/2})
 		names = append(names, fields[2])
@@ -201,7 +201,7 @@ func network_getstat() (rslt [][4]int64, names []string, err error) {
 		fields := strings.Fields(line)
 		names = append(names, strings.Trim(fields[0], ":"))
 
-		i, err := sutils.Fields2Int(fields, []int{1,2,9,10})
+		i, err := Fields2Int(fields, []int{1,2,9,10})
 		if err != nil { return }
 		rslt = append(rslt, [4]int64{(i[0]+1023)/1024, i[1], (i[2]+1023)/1024, i[3]})
 		return 
