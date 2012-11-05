@@ -1,15 +1,14 @@
 package main
 
 import (
-	"io"
 	"os"
 	"fmt"
 	"bytes"
-	"bufio"
 	"errors"
 	"strconv"
 	"strings"
 	"io/ioutil"
+	"./sutils"
 )
 
 func (load *ProcLoad) Probe() error {
@@ -53,19 +52,17 @@ func (load *ProcLoad) Probe() error {
 	return nil
 }
 
-func cpuload_convtoint(fields []string) [4]int64 {
-	var i1, i2, i3, i4 int64
-	i1, _ = strconv.ParseInt(fields[0], 0, 64)
-	i2, _ = strconv.ParseInt(fields[2], 0, 64)
-	i3, _ = strconv.ParseInt(fields[4], 0, 64)
-	i4, _ = strconv.ParseInt(fields[3], 0, 64)
-	return [4]int64{i1, i2, i3, i4}
+func Fields2Int(fields []string, cols []int) (rslt []int64, err error) {
+	var r int64
+	for i := range cols {
+		r, err = strconv.ParseInt(fields[i], 0, 64)
+		if err != nil { return }
+		rslt = append(rslt, r)
+	}
+	return
 }
 
 func cpuload_getstat() (rslt [][4]int64, err error) {
-	var line string
-	var fields []string
-
 	file, err := os.Open("/proc/stat")
 	if err != nil {
 		fmt.Println(fmt.Errorf("CPULoad.Probe: failed optn /proc/stat"))
@@ -73,17 +70,15 @@ func cpuload_getstat() (rslt [][4]int64, err error) {
 	}
 	defer file.Close()
 
-	reader := bufio.NewReader(file)
-	line, err = reader.ReadString('\n')
-	for err == nil {
-		fields = strings.Fields(line)
-		if strings.HasPrefix(fields[0], "cpu") {
-			rslt = append(rslt, cpuload_convtoint(fields[1:]))
-		}
-		line, err = reader.ReadString('\n') 
-	}
+	sutils.ReadLines(file, func (line string) (err error) {
+		fields := strings.Fields(line)
+		if !strings.HasPrefix(fields[0], "cpu") { return }
 
-	if err == io.EOF { err = nil }
+		i, err := sutils.Fields2Int(fields, []int{1,3,5,4})
+		if err != nil { return }
+		rslt = append(rslt, [4]int64{i[0], i[1], i[2], i[3]})
+		return
+	})
 	return
 }
 
@@ -120,23 +115,17 @@ func (load *CPULoad) Probe() (err error) {
 }
 
 func (load *MemoryLoad) Probe() (err error) {
-	var value int64
-	var line string
-	var fields []string
-
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
 		fmt.Println(fmt.Errorf("MemoryLoad.Probe: failed optn /proc/meminfo"))
 		return
 	}
 	defer file.Close()
-	reader := bufio.NewReader(file)
 
-	line, err = reader.ReadString('\n')
-	for err == nil {
-		fields = strings.Split(line, ":")
+	sutils.ReadLines(file, func (line string) (err error) {
+		fields := strings.Split(line, ":")
 		fields[1] = strings.Trim(fields[1], " kbB\r\n")
-		value, err = strconv.ParseInt(fields[1], 0, 32)
+		value, err := strconv.ParseInt(fields[1], 0, 32)
 		if err != nil { return }
 		switch{
 		case fields[0] == "MemFree": load.free = uint32(value)
@@ -148,27 +137,12 @@ func (load *MemoryLoad) Probe() (err error) {
 		case fields[0] == "SwapTotal": load.swaptotal = uint32(value)
 		case fields[0] == "SwapFree": load.swapfree = uint32(value)
 		}
-		line, err = reader.ReadString('\n') 
-	}
-
-	if err == io.EOF { err = nil }
+		return
+	})
 	return
 }
 
-func ioload_convtoint(fields []string) [4]int64 {
-	var i1, i2, i3, i4 int64
-
-	i1, _ = strconv.ParseInt(fields[3], 0, 64)
-	i2, _ = strconv.ParseInt(fields[5], 0, 64)
-	i3, _ = strconv.ParseInt(fields[7], 0, 64)
-	i4, _ = strconv.ParseInt(fields[9], 0, 64)
-	return [4]int64{i1, (i2 + 1) / 2, i3, (i4 + 1) / 2}
-}
-
 func ioload_getstat() (rslt [][4]int64, names []string, err error) {
-	var line string
-	var fields []string
-
 	file, err := os.Open("/proc/diskstats")
 	if err != nil {
 		fmt.Println(fmt.Errorf("IOLoad.Probe: failed optn /proc/diskstats"))
@@ -176,18 +150,16 @@ func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 	}
 	defer file.Close()
 
-	reader := bufio.NewReader(file)
-	line, err = reader.ReadString('\n')
-	for err == nil {
-		fields = strings.Fields(line)
-		if strings.HasPrefix(fields[2], "sd") && len(fields[2]) == 3 {
-			rslt = append(rslt, ioload_convtoint(fields))
-			names = append(names, fields[2])
-		}
-		line, err = reader.ReadString('\n')
-	}
+	sutils.ReadLines(file, func (line string) (err error) {
+		fields := strings.Fields(line)
+		if !strings.HasPrefix(fields[2], "sd") || len(fields[2]) != 3 { return }
 
-	if err == io.EOF { err = nil }
+		i, err := sutils.Fields2Int(fields, []int{3,5,7,9})
+		if err != nil { return }
+		rslt = append(rslt, [4]int64{i[0], (i[1]+1)/2, i[2], (i[3]+1)/2})
+		names = append(names, fields[2])
+		return
+	})
 	return
 }
 
@@ -216,20 +188,7 @@ func (load *IOLoad) Probe() (err error) {
 	return nil
 }
 
-func network_convtoint(fields []string) [4]int64 {
-	var i1, i2, i3, i4 int64
-
-	i1, _ = strconv.ParseInt(fields[1], 0, 64)
-	i2, _ = strconv.ParseInt(fields[2], 0, 64)
-	i3, _ = strconv.ParseInt(fields[9], 0, 64)
-	i4, _ = strconv.ParseInt(fields[10], 0, 64)
-	return [4]int64{(i1 + 1023) / 1024, i2, (i3 + 1023) / 1024, i4}
-}
-
 func network_getstat() (rslt [][4]int64, names []string, err error) {
-	var line string
-	var fields []string
-
 	file, err := os.Open("/proc/net/dev")
 	if err != nil {
 		fmt.Println(fmt.Errorf("Network.Probe: failed optn /proc/net/dev"))
@@ -237,20 +196,16 @@ func network_getstat() (rslt [][4]int64, names []string, err error) {
 	}
 	defer file.Close()
 
-	reader := bufio.NewReader(file)
-
-	line, err = reader.ReadString('\n')
-	line, err = reader.ReadString('\n')
-
-	line, err = reader.ReadString('\n')
-	for err == nil {
-		fields = strings.Fields(line)
+	sutils.ReadLines(file, func (line string) (err error) {
+		if !strings.Contains(line, ":") { return }
+		fields := strings.Fields(line)
 		names = append(names, strings.Trim(fields[0], ":"))
-		rslt = append(rslt, network_convtoint(fields))
-		line, err = reader.ReadString('\n') 
-	}
 
-	if err == io.EOF { err = nil }
+		i, err := sutils.Fields2Int(fields, []int{1,2,9,10})
+		if err != nil { return }
+		rslt = append(rslt, [4]int64{(i[0]+1023)/1024, i[1], (i[2]+1023)/1024, i[3]})
+		return 
+	})
 	return
 }
 
