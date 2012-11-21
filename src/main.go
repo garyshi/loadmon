@@ -39,7 +39,7 @@ func Sender(interval int, logfile *LogFile, peers []LoadPeer) {
 			fmt.Println()
 		}
 		lm.Dump(os.Stdout)
-		logfile.WriteMessage(buffer.Bytes())
+		if logfile != nil { logfile.WriteMessage(buffer.Bytes()) }
 
 		for _,peer := range peers {
 			peer.conn.Write(buffer.Bytes())
@@ -67,7 +67,7 @@ func Receiver(port int, peers []LoadPeer) {
 			if !addr.IP.Equal(peer.addr.IP) { continue }
 			err = lm.Decode(bytes.NewReader(buf[:n]))
 			if err != nil { fmt.Println("Error decode packet:", err) }
-			peer.logfile.WriteMessage(buf[:n])
+			if peer.logfile != nil { peer.logfile.WriteMessage(buf[:n]) }
 			break
 		}
 	}
@@ -109,6 +109,7 @@ var f_server = flag.Bool("l", false, "server mode")
 var f_port = flag.Int("p", 9999, "udp port to listen and (default) send")
 var f_peers = flag.String("P", "", "peers, comma separated ipaddr[:port]")
 var f_monitor = flag.Bool("m", true, "monitor local computer")
+var f_nolog = flag.Bool("n", true, "don't write log files on this node")
 var f_interval = flag.Int("i", 10, "local monitor interval")
 var f_verbose = flag.Int("v", 1, "verbose level")
 
@@ -133,7 +134,7 @@ func main() {
 			if err != nil { log.Fatal("invalid peer address:", ss) }
 			peers[i].conn,err = net.DialUDP("udp", nil, peers[i].addr)
 			if err != nil { log.Fatal("failed connect to udp:", peers[i].addr) }
-			if *f_server {
+			if *f_server && !*f_nolog {
 				peers[i].logfile,err = OpenRotateLogFile(peers[i].addr.IP.String(), &now, MODE_APPEND)
 				if err != nil { log.Fatal("failed open logfile:", err) }
 			}
@@ -145,9 +146,10 @@ func main() {
 	}
 
 	if *f_monitor {
+		var logfile *LogFile
 		hostname,err := os.Hostname()
 		if err != nil { hostname = "localhost" }
-		logfile,err := OpenRotateLogFile(hostname, &now, MODE_APPEND)
+		if !*f_nolog { logfile,err = OpenRotateLogFile(hostname, &now, MODE_APPEND) }
 		Sender(*f_interval, logfile, peers)
 	} else {
 		for { time.Sleep(1 * time.Second) }
