@@ -18,24 +18,27 @@ const (
 type LogFile struct {
 	mode int
 	file *os.File
+	filename, basename string
+	basedate int
 }
 
-func LogFileName(logdir, basename string, t *time.Time) (filename string) {
-	if t == nil {
-		filename = fmt.Sprintf("%s.log", basename)
-	} else {
-		filename = fmt.Sprintf("%s-%s.log", basename, t.Format("20060102"))
-	}
-
-	if len(logdir) > 0 {
-		filename = fmt.Sprintf("%s/%s", logdir, filename)
-	}
-
-	return
+func OpenRotateLogFile(basename string, t *time.Time, mode int) (logfile *LogFile, err error) {
+	logfile = &LogFile{mode:mode, basename:basename}
+	logfile.filename = fmt.Sprintf("%s-%s.log", basename, t.Format("20060102"))
+	logfile.basedate = int(ToTimestamp(*t) / 86400)
+	return logfile, logfile.Open()
 }
 
 func OpenLogFile(filename string, mode int) (logfile *LogFile, err error) {
-	logfile = &LogFile{mode:mode}
+	logfile = &LogFile{mode:mode, filename:filename}
+	return logfile, logfile.Open()
+}
+
+func (logfile *LogFile) Open() (err error) {
+	var mode int
+
+	if logfile.file != nil { return fmt.Errorf("logfile already open") }
+
 	switch logfile.mode {
 	case MODE_APPEND:
 		mode = os.O_CREATE|os.O_WRONLY|os.O_APPEND
@@ -44,22 +47,40 @@ func OpenLogFile(filename string, mode int) (logfile *LogFile, err error) {
 	case MODE_READ:
 		mode = os.O_RDONLY
 	default:
-		return nil, fmt.Errorf("invalid mode")
+		return fmt.Errorf("invalid mode")
 	}
 
-	logfile.file,err = os.OpenFile(filename, mode, 0644)
-	if err != nil { return nil, err }
+	logfile.file,err = os.OpenFile(logfile.filename, mode, 0644)
 
 	return
 }
 
-// TODO: switch to new logfile as time goes on...
+func (logfile *LogFile) Close() {
+	if logfile.file != nil {
+		logfile.file.Close()
+		logfile.file = nil
+	}
+}
+
 func (logfile *LogFile) WriteMessage(buf []byte) error {
 	if logfile.mode != MODE_APPEND && logfile.mode != MODE_REWRITE {
 		return fmt.Errorf("invalid mode")
 	}
 
-	ts := GetTimestamp()
+	now := time.Now()
+	ts := ToTimestamp(now)
+	if logfile.basedate != 0 {
+		basedate := int(ts / 86400)
+		if basedate != logfile.basedate {
+			logfile.file.Close()
+			logfile.file = nil
+			logfile.filename = fmt.Sprintf("%s-%s.log", logfile.basename, now.Format("20060102"))
+			logfile.basedate = basedate
+			err := logfile.Open()
+			if err != nil { return err }
+		}
+	}
+
 	//logfile.file.Seek(0, os.SEEK_END)
 	w := bufio.NewWriter(logfile.file)
 	binary.Write(w, binary.BigEndian, ts)

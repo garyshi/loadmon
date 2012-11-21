@@ -134,9 +134,8 @@ func main() {
 			peers[i].conn,err = net.DialUDP("udp", nil, peers[i].addr)
 			if err != nil { log.Fatal("failed connect to udp:", peers[i].addr) }
 			if *f_server {
-				filename := LogFileName("", peers[i].addr.IP.String(), &now)
-				peers[i].logfile,err = OpenLogFile(filename, MODE_APPEND)
-				if err != nil { log.Fatal("failed open logfile:", filename) }
+				peers[i].logfile,err = OpenRotateLogFile(peers[i].addr.IP.String(), &now, MODE_APPEND)
+				if err != nil { log.Fatal("failed open logfile:", err) }
 			}
 		}
 	}
@@ -148,8 +147,7 @@ func main() {
 	if *f_monitor {
 		hostname,err := os.Hostname()
 		if err != nil { hostname = "localhost" }
-		filename := LogFileName("", hostname, &now)
-		logfile,err := OpenLogFile(filename, MODE_APPEND)
+		logfile,err := OpenRotateLogFile(hostname, &now, MODE_APPEND)
 		Sender(*f_interval, logfile, peers)
 	} else {
 		for { time.Sleep(1 * time.Second) }
