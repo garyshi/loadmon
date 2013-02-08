@@ -65,7 +65,7 @@ func Fields2Int(fields []string, cols []int) (rslt []int64, err error) {
 func cpuload_getstat() (rslt [][4]int64, err error) {
 	file, err := os.Open("/proc/stat")
 	if err != nil {
-		fmt.Println(fmt.Errorf("CPULoad.Probe: failed optn /proc/stat"))
+		fmt.Println(fmt.Errorf("CPULoad.Probe: failed open /proc/stat"))
 		return
 	}
 	defer file.Close()
@@ -117,7 +117,7 @@ func (load *CPULoad) Probe() (err error) {
 func (load *MemoryLoad) Probe() (err error) {
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
-		fmt.Println(fmt.Errorf("MemoryLoad.Probe: failed optn /proc/meminfo"))
+		fmt.Println(fmt.Errorf("MemoryLoad.Probe: failed open /proc/meminfo"))
 		return
 	}
 	defer file.Close()
@@ -145,7 +145,7 @@ func (load *MemoryLoad) Probe() (err error) {
 func ioload_getstat() (rslt [][4]int64, names []string, err error) {
 	file, err := os.Open("/proc/diskstats")
 	if err != nil {
-		fmt.Println(fmt.Errorf("IOLoad.Probe: failed optn /proc/diskstats"))
+		fmt.Println(fmt.Errorf("IOLoad.Probe: failed open /proc/diskstats"))
 		return
 	}
 	defer file.Close()
@@ -191,7 +191,7 @@ func (load *IOLoad) Probe() (err error) {
 func network_getstat() (rslt [][4]int64, names []string, err error) {
 	file, err := os.Open("/proc/net/dev")
 	if err != nil {
-		fmt.Println(fmt.Errorf("Network.Probe: failed optn /proc/net/dev"))
+		fmt.Println(fmt.Errorf("Network.Probe: failed open /proc/net/dev"))
 		return
 	}
 	defer file.Close()
@@ -204,7 +204,7 @@ func network_getstat() (rslt [][4]int64, names []string, err error) {
 		i, err := Fields2Int(fields, []int{1,2,9,10})
 		if err != nil { return }
 		rslt = append(rslt, [4]int64{(i[0]+1023)/1024, i[1], (i[2]+1023)/1024, i[3]})
-		return 
+		return
 	})
 	return
 }
